@@ -17,9 +17,9 @@ from telegram.ext import (
     filters,
 )
 
-# -------------------------------
+# -------------------------------------------
 # Conversation State Definitions
-# -------------------------------
+# -------------------------------------------
 LOGIN_EMAIL = 0
 LOGIN_PASSWORD = 1
 TASK_SELECTION = 2
@@ -29,26 +29,26 @@ WAIT_CONFIRM_CHECKIN = 5
 WAIT_FINISH = 6
 WAIT_CHECKOUT_PHOTO = 7
 WAIT_CONFIRM_CHECKOUT = 8
-MAIN_MENU = 100  # State for logged-in main menu
+MAIN_MENU = 100
 
-# -------------------------------
+# -------------------------------------------
 # Global Configuration & API URLs
-# -------------------------------
+# -------------------------------------------
 API_LOGIN_URL = os.getenv("API_LOGIN_URL", "http://web:8000/auth/login")
 API_CHECK_EMAIL_URL = os.getenv("API_CHECK_EMAIL_URL", "http://web:8000/auth/check_email")
 API_GET_TASKS_URL = os.getenv("API_GET_TASKS_URL", "http://web:8000")
 API_DAILY_ENTRY_URL = os.getenv("API_DAILY_ENTRY_URL", "http://web:8000/data/daily-entry")
 API_DAILY_ENTRY_TODAY_URL = os.getenv("API_DAILY_ENTRY_TODAY_URL", "http://web:8000/data/daily-entry/today")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8103489251:AAEw30I0rifou8Ehx_Du2R_TCLEzA6w_Sbk")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# -------------------------------
-# Translations Dictionary (extended)
-# -------------------------------
+# -------------------------------------------
+# Translations Dictionary (including new "photo_sent" key)
+# -------------------------------------------
 translations = {
     "en": {
         "welcome": "🌐 *Welcome!* Please choose your language:",
@@ -75,6 +75,7 @@ translations = {
         "please_send_new_checkout": "Please send a new check‑out photo.",
         "submission_success": "Thank you! Your daily entry has been submitted successfully.",
         "submission_error": "Error submitting daily entry. Please try again.",
+        "photo_sent": "Photo sent",  # <-- New translation key
     },
     "ru": {
         "welcome": "🌐 *Добро пожаловать!* Пожалуйста, выберите язык:",
@@ -101,6 +102,7 @@ translations = {
         "please_send_new_checkout": "Пожалуйста, отправьте новое фото при выходе.",
         "submission_success": "Спасибо! Ваш ежедневный отчет успешно отправлен.",
         "submission_error": "Ошибка отправки отчета. Пожалуйста, попробуйте снова.",
+        "photo_sent": "Фото отправлено",
     },
     "ky": {
         "welcome": "🌐 *Кош келиңиз!* Сураныч, тилиңизди тандаңыз:",
@@ -127,6 +129,7 @@ translations = {
         "please_send_new_checkout": "Сураныч, чыгуу үчүн жаңы фото жибериниз.",
         "submission_success": "Рахмат! Сиздин күнүмдүк отчет ийгиликтүү жөнөтүлдү.",
         "submission_error": "Ката, күнүмдүк отчет жөнөтүлгөн жок. Кайра аракет кылыңыз.",
+        "photo_sent": "Фото жөнөтүлдү",
     },
     "kk": {
         "welcome": "🌐 *Қош келдіңіз!* Тілді таңдаңыз:",
@@ -153,22 +156,23 @@ translations = {
         "please_send_new_checkout": "Өтінеміз, шыққан кездегі жаңа фото жіберіңіз.",
         "submission_success": "Рақмет! Күнделікті есеп сәтті жіберілді.",
         "submission_error": "Күнделікті есеп жіберілген жоқ. Өтінеміз, қайта көріңіз.",
+        "photo_sent": "Фото жіберілді",
     },
 }
 LANG_CODES = ["en", "ru", "ky", "kk"]
 
-# -------------------------------
-# Helper Function: Escape Markdown
-# -------------------------------
+# -------------------------------------------
+# Helper Function: Escape Markdown (v2)
+# -------------------------------------------
 def escape_markdown_v2(text: str) -> str:
     reserved_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in reserved_chars:
         text = text.replace(char, f"\\{char}")
     return text
 
-# -------------------------------
-# Start Command Handler (Language Selection)
-# -------------------------------
+# -------------------------------------------
+# Command Handlers
+# -------------------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [InlineKeyboardButton("English", callback_data="en"),
@@ -184,9 +188,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         parse_mode=ParseMode.MARKDOWN_V2,
     )
 
-# -------------------------------
-# Main Menu Handler (Language Selection & Logout)
-# -------------------------------
 async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     try:
@@ -209,7 +210,6 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
         except BadRequest:
-            # if editing fails, send a new message
             await query.message.reply_text(
                 text=escape_markdown_v2(text),
                 reply_markup=reply_markup,
@@ -237,9 +237,6 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
 
-# -------------------------------
-# Conversation Cancel Handler
-# -------------------------------
 async def conversation_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lang = context.user_data.get("language", "en")
     if "user_id" not in context.user_data:
@@ -270,9 +267,9 @@ async def conversation_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE
         await show_logged_in_menu(update, context)
     return ConversationHandler.END
 
-# -------------------------------
+# -------------------------------------------
 # Login Conversation Handlers
-# -------------------------------
+# -------------------------------------------
 async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     try:
@@ -363,9 +360,9 @@ async def password_received(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return LOGIN_PASSWORD
     return await show_logged_in_menu(update, context)
 
-# -------------------------------
-# Logged-in Main Menu Handler (MAIN_MENU state)
-# -------------------------------
+# -------------------------------------------
+# Logged-in Main Menu Handler
+# -------------------------------------------
 async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lang = context.user_data.get("language", "en")
     user_id = context.user_data.get("user_id")
@@ -398,7 +395,6 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
         except BadRequest as e:
-            # If editing fails (e.g. "There is no text in the message to edit"), send a new message.
             logger.warning("Editing message in show_logged_in_menu failed: %s", e)
             await update.callback_query.message.reply_text(
                 text=escape_markdown_v2(text),
@@ -413,15 +409,12 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     return MAIN_MENU
 
-# -------------------------------
-# Handler for "Enter Daily Entry" Button
-# -------------------------------
+# -------------------------------------------
+# Daily Entry Conversation Handlers
+# -------------------------------------------
 async def enter_daily_entry_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return await show_task_selection(update, context)
 
-# -------------------------------
-# Logout Handler (from MAIN_MENU)
-# -------------------------------
 async def logout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     keyboard = [
@@ -446,9 +439,6 @@ async def logout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
     return ConversationHandler.END
 
-# -------------------------------
-# Daily Entry Conversation Handlers (Task selection, photos, etc.)
-# -------------------------------
 async def show_task_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lang = context.user_data.get("language", "en")
     project_id = context.user_data.get("project_id")
@@ -532,9 +522,6 @@ async def start_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     return WAIT_CHECKIN_PHOTO
 
-# -------------------------------
-# Check‑in Photo Handlers (with Confirmation)
-# -------------------------------
 async def checkin_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lang = context.user_data.get("language", "en")
     if not update.message.photo:
@@ -580,8 +567,9 @@ async def confirm_checkin_handler(update: Update, context: ContextTypes.DEFAULT_
             [InlineKeyboardButton(translations[lang]["cancel"], callback_data="cancel_conversation")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        # Update caption to say "Photo sent" rather than the finish button text.
         await query.edit_message_caption(
-            caption=escape_markdown_v2(translations[lang]["finish_button"]),
+            caption=escape_markdown_v2(translations[lang]["photo_sent"]),
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN_V2,
         )
@@ -597,9 +585,6 @@ async def confirm_checkin_handler(update: Update, context: ContextTypes.DEFAULT_
         )
         return WAIT_CHECKIN_PHOTO
 
-# -------------------------------
-# Finish Task and Check‑out Photo Handlers (with Confirmation)
-# -------------------------------
 async def finish_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     try:
@@ -713,7 +698,6 @@ async def confirm_checkout_handler(update: Update, context: ContextTypes.DEFAULT
         except Exception as e:
             logger.error("Error submitting daily entry: %s", e)
             await query.message.reply_text(translations[lang]["submission_error"])
-        # After submission, return to the logged-in main menu.
         return await show_logged_in_menu(update, context)
     elif data == "confirm_checkout_no":
         temp_path = context.user_data.get("temp_check_out_photo")
@@ -726,9 +710,9 @@ async def confirm_checkout_handler(update: Update, context: ContextTypes.DEFAULT
         )
         return WAIT_CHECKOUT_PHOTO
 
-# -------------------------------
-# Main Function: Build Application and Add Handlers
-# -------------------------------
+# -------------------------------------------
+# Main function
+# -------------------------------------------
 def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
     conv_handler = ConversationHandler(
@@ -777,6 +761,7 @@ def main() -> None:
             ],
         },
         fallbacks=[CallbackQueryHandler(conversation_cancel, pattern="^cancel_conversation$")],
+        allow_reentry=True  # <-- Allow re‑entry after conversation end.
     )
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(main_menu_handler, pattern="^(en|ru|ky|kk|logout)$"))
