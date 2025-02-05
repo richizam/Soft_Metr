@@ -13,7 +13,7 @@ def get_password_hash(password: str) -> str:
 
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(User).filter(User.email == email).first()
-    if not user:
+    if not user: 
         return None
     if not verify_password(password, user.password_hash):
         return None

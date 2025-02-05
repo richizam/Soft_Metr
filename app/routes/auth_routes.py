@@ -16,6 +16,7 @@ class LoginResponse(BaseModel):
     user_id: int
     email: EmailStr
     role: str
+    project_id: int = None
 
 def get_db():
     db = SessionLocal()
@@ -29,11 +30,10 @@ def login(login_req: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, login_req.email, login_req.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return LoginResponse(user_id=user.id, email=user.email, role=user.role)
+    return LoginResponse(user_id=user.id, email=user.email, role=user.role, project_id=user.project_id)
 
-# --- Updated Check Email Endpoint ---
 class CheckEmailRequest(BaseModel):
-    email: str  # Changed from EmailStr to str
+    email: str  # Accept any string
 
 @router.post("/check_email")
 def check_email(check_req: CheckEmailRequest, db: Session = Depends(get_db)):
