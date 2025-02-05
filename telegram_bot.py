@@ -158,7 +158,7 @@ translations = {
 LANG_CODES = ["en", "ru", "ky", "kk"]
 
 # -------------------------------
-# Helper Function
+# Helper Function: Escape Markdown
 # -------------------------------
 def escape_markdown_v2(text: str) -> str:
     reserved_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
@@ -197,17 +197,24 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data in LANG_CODES:
         context.user_data["language"] = data
         lang = data
-        # Show only a Login button (language is now fixed)
         keyboard = [
             [InlineKeyboardButton(translations[lang]["login"], callback_data="login")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         text = f"*{lang.upper()} Selected*\\\n\\\nPlease login to continue:"
-        await query.edit_message_text(
-            text=escape_markdown_v2(text),
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )
+        try:
+            await query.edit_message_text(
+                text=escape_markdown_v2(text),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        except BadRequest:
+            # if editing fails, send a new message
+            await query.message.reply_text(
+                text=escape_markdown_v2(text),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
     elif data == "logout":
         context.user_data.clear()
         keyboard = [
@@ -217,11 +224,18 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
              InlineKeyboardButton("Қазақша", callback_data="kk")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            text=escape_markdown_v2(translations["en"]["welcome"]),
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )
+        try:
+            await query.edit_message_text(
+                text=escape_markdown_v2(translations["en"]["welcome"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        except BadRequest:
+            await query.message.reply_text(
+                text=escape_markdown_v2(translations["en"]["welcome"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
 
 # -------------------------------
 # Conversation Cancel Handler
@@ -384,7 +398,13 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
         except BadRequest as e:
+            # If editing fails (e.g. "There is no text in the message to edit"), send a new message.
             logger.warning("Editing message in show_logged_in_menu failed: %s", e)
+            await update.callback_query.message.reply_text(
+                text=escape_markdown_v2(text),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
     else:
         await update.message.reply_text(
             text=escape_markdown_v2(text),
@@ -419,6 +439,11 @@ async def logout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
     except BadRequest as e:
         logger.warning("Editing message in logout_handler failed: %s", e)
+        await update.callback_query.message.reply_text(
+            text=escape_markdown_v2(translations["en"]["welcome"]),
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
     return ConversationHandler.END
 
 # -------------------------------
@@ -588,17 +613,33 @@ async def finish_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if query.message.photo:
-        await query.edit_message_caption(
-            caption=escape_markdown_v2(translations[lang]["checkout_prompt"]),
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )
+        try:
+            await query.edit_message_caption(
+                caption=escape_markdown_v2(translations[lang]["checkout_prompt"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        except BadRequest as e:
+            logger.warning("Editing message caption failed in finish_task_handler: %s", e)
+            await query.message.reply_text(
+                text=escape_markdown_v2(translations[lang]["checkout_prompt"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
     else:
-        await query.edit_message_text(
-            text=escape_markdown_v2(translations[lang]["checkout_prompt"]),
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )
+        try:
+            await query.edit_message_text(
+                text=escape_markdown_v2(translations[lang]["checkout_prompt"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        except BadRequest as e:
+            logger.warning("Editing message text failed in finish_task_handler: %s", e)
+            await query.message.reply_text(
+                text=escape_markdown_v2(translations[lang]["checkout_prompt"]),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
     return WAIT_CHECKOUT_PHOTO
 
 async def checkout_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
