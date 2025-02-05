@@ -14,5 +14,6 @@ COPY . .
 # Expose the port (FastAPI will run on 8000 inside the container)
 EXPOSE 8000
 
-# Run the FastAPI app with Uvicorn
+# Default command: run the FastAPI app.
+# (The telegram_bot service will override this command.)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

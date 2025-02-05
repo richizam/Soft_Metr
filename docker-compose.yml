@@ -20,10 +20,23 @@ services:
     depends_on:
       - db
     environment:
-      # Use environment variables to pass the connection string.
       DATABASE_URL: "postgresql://myuser:mypassword@db:5432/mydatabase"
     expose:
       - "8000"
+    restart: always
+
+  telegram_bot:
+    build: .
+    container_name: telegram_bot
+    depends_on:
+      - web
+    environment:
+      # Use the FastAPI service’s hostname in Docker (not localhost)
+      API_LOGIN_URL: "http://web:8000/auth/login"
+      API_CHECK_EMAIL_URL: "http://web:8000/auth/check_email"
+      # Replace with your actual bot token or set it as an environment variable
+      BOT_TOKEN: "8103489251:AAEw30I0rifou8Ehx_Du2R_TCLEzA6w_Sbk"
+    command: python telegram_bot.py
     restart: always
 
   nginx:
