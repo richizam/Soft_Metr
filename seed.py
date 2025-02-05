@@ -1,6 +1,5 @@
 # seed.py
 import os
-import random
 from app.database import SessionLocal, engine, Base
 from app.models import User, Project, Task
 from app.services.auth_service import get_password_hash
@@ -30,8 +29,7 @@ def seed():
         session.add(task)
     session.commit()
 
-    # --- Create 20 Workers Assigned to the Project ---
-    # All workers will use the same password for testing ("password")
+    # --- Create 20 Worker Accounts ---
     for i in range(1, 21):
         email = f"worker{i}@example.com"
         hashed_password = get_password_hash("password")
@@ -42,15 +40,26 @@ def seed():
             project_id=project.id
         )
         session.add(user)
+
+    # --- Create an Admin Account ---
+    admin_email = "admin@example.com"
+    admin_password = get_password_hash("adminpass")
+    admin_user = User(
+        email=admin_email,
+        password_hash=admin_password,
+        role="admin",
+        project_id=project.id
+    )
+    session.add(admin_user)
     session.commit()
 
     print("Seeding complete. Created:")
     print(f"  1 Project: {project.name} (id: {project.id})")
     print(f"  {len(tasks)} Tasks")
     print("  20 Worker accounts (worker1@example.com ... worker20@example.com, password: 'password')")
+    print("  1 Admin account (admin@example.com, password: 'adminpass')")
     session.close()
 
 if __name__ == "__main__":
-    # Ensure tables exist (in development you may already have run migrations)
     Base.metadata.create_all(bind=engine)
     seed()
