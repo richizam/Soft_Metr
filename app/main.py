@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from app.routes import auth_routes, data_routes, project_routes, admin_routes
 from app.database import engine, Base
-Base.metadata.drop_all(bind=engine)
+#Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Construction Project API")
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])

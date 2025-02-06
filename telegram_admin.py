@@ -6,31 +6,49 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import BadRequest
 from telegram.constants import ParseMode
 from telegram.ext import CallbackQueryHandler, ConversationHandler, ContextTypes
+
 logger = logging.getLogger(__name__)
+
 ADMIN_VIEW_WORKERS = 20
 ADMIN_WORKER_DETAILS = 21
 ADMIN_ANALYTICS = 22
+
 def escape_markdown_v2(text: str) -> str:
     reserved_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in reserved_chars:
         text = text.replace(char, f"\\{char}")
     return text
+
 translations = {
-"en": {
-"view_workers": "View Workers",
-"analytics": "Analytics",
-"back": "Back",
-"worker_list": "Worker List:",
-"no_workers": "No workers found.",
-"worker_details": "Worker Details:",
-"daily_entries": "Daily Entries:",
-"no_data": "No data available.",
-"error_fetching": "Error fetching data.",
-"top_workers": "Top Workers:"
+    "en": {
+        "view_workers": "View Workers 👥",
+        "analytics": "Analytics 📊",
+        "back": "Back 🔙",
+        "worker_list": "Worker List:",
+        "no_workers": "No workers found.",
+        "worker_details": "Worker Details:",
+        "daily_entries": "Daily Entries:",
+        "no_data": "No data available.",
+        "error_fetching": "Error fetching data.",
+        "top_workers": "Top Workers:"
+    },
+    "ru": {
+        "view_workers": "Сотрудники 👥",
+        "analytics": "Аналитика 📊",
+        "back": "Назад 🔙",
+        "worker_list": "Список сотрудников:",
+        "no_workers": "Сотрудников не найдено.",
+        "worker_details": "Детали сотрудника:",
+        "daily_entries": "Отчёты:",
+        "no_data": "Нет данных.",
+        "error_fetching": "Ошибка получения данных.",
+        "top_workers": "Лучшие сотрудники:"
+    }
 }
-}
+
 def get_lang(context: ContextTypes.DEFAULT_TYPE) -> str:
-    return context.user_data.get("language", "en")
+    return context.user_data.get("language", "ru")
+
 async def admin_view_workers(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     lang = get_lang(context)
@@ -46,10 +64,14 @@ async def admin_view_workers(update: Update, context: ContextTypes.DEFAULT_TYPE)
         workers = response.json()
     except Exception as e:
         logger.error("Error fetching workers: %s", e)
-        await query.edit_message_text(text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2)
+        await query.edit_message_text(
+            text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2
+        )
         return ConversationHandler.END
     if not workers:
-        await query.edit_message_text(text=escape_markdown_v2(translations[lang]["no_workers"]), parse_mode=ParseMode.MARKDOWN_V2)
+        await query.edit_message_text(
+            text=escape_markdown_v2(translations[lang]["no_workers"]), parse_mode=ParseMode.MARKDOWN_V2
+        )
         return ConversationHandler.END
     keyboard = []
     for worker in workers:
@@ -57,8 +79,11 @@ async def admin_view_workers(update: Update, context: ContextTypes.DEFAULT_TYPE)
     keyboard.append([InlineKeyboardButton(translations[lang]["back"], callback_data="admin_back")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = translations[lang]["worker_list"]
-    await query.edit_message_text(text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
+    await query.edit_message_text(
+        text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2
+    )
     return ADMIN_VIEW_WORKERS
+
 async def admin_worker_details(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     lang = get_lang(context)
@@ -79,7 +104,9 @@ async def admin_worker_details(update: Update, context: ContextTypes.DEFAULT_TYP
             details = response.json()
         except Exception as e:
             logger.error("Error fetching worker details: %s", e)
-            await query.edit_message_text(text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2)
+            await query.edit_message_text(
+                text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2
+            )
             return ADMIN_VIEW_WORKERS
         worker = details.get("worker", {})
         entries = details.get("entries", [])
@@ -94,9 +121,12 @@ async def admin_worker_details(update: Update, context: ContextTypes.DEFAULT_TYP
             text += translations[lang]["no_data"]
         keyboard = [[InlineKeyboardButton(translations[lang]["back"], callback_data="admin_view_workers")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
+        await query.edit_message_text(
+            text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2
+        )
         return ADMIN_WORKER_DETAILS
     return ADMIN_VIEW_WORKERS
+
 async def admin_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     lang = get_lang(context)
@@ -112,7 +142,9 @@ async def admin_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         analytics = response.json()
     except Exception as e:
         logger.error("Error fetching analytics: %s", e)
-        await query.edit_message_text(text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2)
+        await query.edit_message_text(
+            text=escape_markdown_v2(translations[lang]["error_fetching"]), parse_mode=ParseMode.MARKDOWN_V2
+        )
         return ConversationHandler.END
     text = translations[lang]["analytics"] + "\n"
     text += f"Average Hours: {analytics.get('average_hours', 0):.2f}\n"
@@ -126,8 +158,11 @@ async def admin_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         text += translations[lang]["no_data"]
     keyboard = [[InlineKeyboardButton(translations[lang]["back"], callback_data="admin_back")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
+    await query.edit_message_text(
+        text=escape_markdown_v2(text), reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2
+    )
     return ADMIN_ANALYTICS
+
 async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     try:
@@ -136,6 +171,7 @@ async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         pass
     await query.edit_message_text(text="Admin action cancelled.")
     return ConversationHandler.END
+
 admin_conv_handler = ConversationHandler(
     entry_points=[
         CallbackQueryHandler(admin_view_workers, pattern="^admin_view_workers$"),
