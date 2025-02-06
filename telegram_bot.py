@@ -5,7 +5,15 @@ from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import BadRequest
 from telegram.constants import ParseMode
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ConversationHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ConversationHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -31,7 +39,7 @@ API_DAILY_ENTRY_URL = os.getenv("API_DAILY_ENTRY_URL", "http://web:8000/data/dai
 API_DAILY_ENTRY_TODAY_URL = os.getenv("API_DAILY_ENTRY_TODAY_URL", "http://web:8000/data/daily-entry/today")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8103489251:AAEw30I0rifou8Ehx_Du2R_TCLEzA6w_Sbk")
 
-# Translations dictionary
+# Main translations dictionary (for non‑admin texts)
 translations = {
     "en": {
         "welcome": "🌐 *Welcome!* Please choose your language:",
@@ -41,109 +49,105 @@ translations = {
         "email_prompt": "Please enter your email:",
         "email_not_found": "This email doesn't exist. Please enter a valid email:",
         "password_prompt": "Now, please enter your password:",
-        "login_success": "Login successful! Welcome {email}! Your role is: {role}",
-        "login_failed": "Login failed. Please try again.",
-        "daily_already": "You have already submitted your daily entry for today.",
-        "task_prompt": "Please select the task you will perform today:",
-        "start_button": "Start 🚀",
-        "finish_button": "Finish ✅",
-        "checkin_prompt": "Please send your check‑in photo:",
-        "checkout_prompt": "Please send your check‑out photo:",
-        "confirm_photo": "Is this the photo you want to send? 🤔",
-        "yes": "Yes 👍",
-        "no": "No 👎",
-        "cancel": "Cancel ❌",
+        "login_success": "✅ Login successful! Welcome {email}! Your role is: {role}",
+        "login_failed": "❌ Login failed. Please try again.",
+        "daily_already": "📝 You have already submitted your daily entry for today.",
+        "task_prompt": "👉 Please select the task you will perform today:",
+        "start_button": "🚀 Start",
+        "finish_button": "✅ Finish",
+        "checkin_prompt": "📸 Please send your check‑in photo:",
+        "checkout_prompt": "📸 Please send your check‑out photo:",
+        "confirm_photo": "🤔 Is this the photo you want to send?",
+        "yes": "👍 Yes",
+        "no": "👎 No",
+        "cancel": "❌ Cancel",
         "please_send_photo": "Please send a photo.",
         "please_send_new_checkin": "Please send a new check‑in photo.",
         "please_send_new_checkout": "Please send a new check‑out photo.",
-        "submission_success": "Thank you! Your daily entry has been submitted successfully.",
-        "submission_error": "Error submitting daily entry. Please try again.",
-        "photo_sent": "Photo sent",
+        "submission_success": "🎉 Thank you! Your daily entry has been submitted successfully.",
+        "submission_error": "❌ Error submitting daily entry. Please try again.",
         "login_prompt": "Please log in to continue:"
     },
     "ru": {
         "welcome": "Привет! 👋🏻 Пожалуйста, выбери язык 🌍💬:",
         "login": "🔐 Войти",
         "logout": "Выйти",
-        "enter_daily": "📝 Отправить ежедневный отчет",
+        "enter_daily": "📝 Отправить ежедневный отчёт",
         "email_prompt": "Пожалуйста, введи свою почту:",
         "email_not_found": "Такого email нет. Введи, пожалуйста, корректный email:",
         "password_prompt": "Теперь введи свой пароль:",
-        "login_success": "Успешный вход! Привет, {email}! Твоя роль: {role}",
-        "login_failed": "Ошибка входа. Попробуй ещё раз.",
-        "daily_already": "Ты уже отправил ежедневный отчет сегодня.",
-        "task_prompt": "Выбери задачу, которую будешь выполнять сегодня:",
-        "start_button": "Начать 🚀",
-        "finish_button": "Закончить ✅",
-        "checkin_prompt": "Пришли фото для входа:",
-        "checkout_prompt": "Пришли фото для выхода:",
-        "confirm_photo": "Это фото, которое хочешь отправить? 🤔",
-        "yes": "Да 👍",
-        "no": "Нет 👎",
-        "cancel": "Отмена ❌",
+        "login_success": "✅ Успешный вход! Привет, {email}! Твоя роль: {role}",
+        "login_failed": "❌ Ошибка входа. Попробуй ещё раз.",
+        "daily_already": "📝 Ты уже отправил ежедневный отчёт сегодня.",
+        "task_prompt": "👉 Выбери задачу, которую будешь выполнять сегодня:",
+        "start_button": "🚀 Начать",
+        "finish_button": "✅ Закончить",
+        "checkin_prompt": "📸 Пришли фото для входа:",
+        "checkout_prompt": "📸 Пришли фото для выхода:",
+        "confirm_photo": "🤔 Это фото, которое хочешь отправить?",
+        "yes": "👍 Да",
+        "no": "👎 Нет",
+        "cancel": "❌ Отмена",
         "please_send_photo": "Пожалуйста, пришли фото.",
         "please_send_new_checkin": "Пришли новое фото для входа.",
         "please_send_new_checkout": "Пришли новое фото для выхода.",
-        "submission_success": "Спасибо! Ежедневный отчет успешно отправлен.",
-        "submission_error": "Ошибка отправки отчета. Попробуй ещё раз.",
-        "photo_sent": "Фото отправлено.",
+        "submission_success": "🎉 Спасибо! Ежедневный отчёт успешно отправлен.",
+        "submission_error": "❌ Ошибка отправки отчёта. Попробуй ещё раз.",
         "login_prompt": "Пожалуйста, войди, чтобы продолжить:"
     },
     "ky": {
-        "welcome": "🌐 *Кош келиңиз!* Сураныч, тилиңизди тандаңыз:",
+        "welcome": "Салам! 👋🏻 Сураныч, тилиңизди тандаңыз:",
         "login": "🔐 Кирүү",
         "logout": "Чыгуу",
-        "enter_daily": "Күнүмдүк отчетту жөнөтүү",
-        "email_prompt": "Сураныч, электрондук почтаңызды жазыңыз:",
-        "email_not_found": "Мындай email жок. Сураныч, туура электрондук почтаңызды жазыңыз:",
+        "enter_daily": "📝 Күнүмдүк эсеп жөнөтүү",
+        "email_prompt": "Электрондук почтаңызды жазыңыз:",
+        "email_not_found": "Мындай email жок. Туура email жазыңыз:",
         "password_prompt": "Эми сырсөзүңүздү жазыңыз:",
-        "login_success": "Кирүү ийгиликтүү болду! {email} кош келиңиз. Сиздин ролуңуз: {role}",
-        "login_failed": "Кирүү учурунда ката. Кайра аракет кылыңыз.",
-        "daily_already": "Сиз бүгүн күнүмдүк отчетту жөнөтүп алдыңыз.",
-        "task_prompt": "Сураныч, бүгүн аткармакчы болгон тапшырманы тандаңыз:",
-        "start_button": "Баштоо",
-        "finish_button": "Аяктоо",
-        "checkin_prompt": "Сураныч, кирүү үчүн фото жибериниз:",
-        "checkout_prompt": "Сураныч, чыгуу үчүн фото жибериниз:",
-        "confirm_photo": "Бул сиз жөнөтүүчү фото экенине ишенесизби?",
-        "yes": "Ооба",
-        "no": "Жок",
-        "cancel": "Баш тартуу",
+        "login_success": "✅ Кирүү ийгиликтүү! {email} – кош келдиң, ролуң: {role}",
+        "login_failed": "❌ Кирүүдө ката. Кайра аракет кылыңыз.",
+        "daily_already": "📝 Бүгүн күнүмдүк эсеп жөнөтүлгөн.",
+        "task_prompt": "👉 Бүгүн кандай тапшырманы аткарганыңызды тандаңыз:",
+        "start_button": "🚀 Баштоо",
+        "finish_button": "✅ Аяктоо",
+        "checkin_prompt": "📸 Кирүү үчүн фото жибериңиз:",
+        "checkout_prompt": "📸 Чыгуу үчүн фото жибериңиз:",
+        "confirm_photo": "🤔 Бул сиз жөнөтүүчү фотобу?",
+        "yes": "👍 Ооба",
+        "no": "👎 Жок",
+        "cancel": "❌ Баш тартуу",
         "please_send_photo": "Сураныч, фото жибериңиз.",
-        "please_send_new_checkin": "Сураныч, кирүү үчүн жаңы фото жибериниз.",
-        "please_send_new_checkout": "Сураныч, чыгуу үчүн жаңы фото жибериниз.",
-        "submission_success": "Рахмат! Сиздин күнүмдүк отчет ийгиликтүү жөнөтүлдү.",
-        "submission_error": "Ката, күнүмдүк отчет жөнөтүлгөн жок. Кайра аракет кылыңыз.",
-        "photo_sent": "Фото жөнөтүлдү.",
-        "login_prompt": "Сураныч, кирип улант:"
+        "please_send_new_checkin": "Жаңы кирүү фото жибериңиз.",
+        "please_send_new_checkout": "Жаңы чыгуу фото жибериңиз.",
+        "submission_success": "🎉 Рахмат! Күнүмдүк эсеп ийгиликтүү жөнөтүлдү.",
+        "submission_error": "❌ Ката. Күнүмдүк эсеп жөнөтүлгөн жок. Кайра аракет кылыңыз.",
+        "login_prompt": "Сураныч, кирип улантыңыз:"
     },
     "kk": {
-        "welcome": "🌐 *Қош келдіңіз!* Тілді таңдаңыз:",
+        "welcome": "Сәлем! 👋🏻 Тілді таңдаңыз:",
         "login": "🔐 Кіру",
         "logout": "Шығу",
-        "enter_daily": "Күнделікті есепті енгізу",
-        "email_prompt": "Өтінеміз, электрондық поштаңызды енгізіңіз:",
-        "email_not_found": "Мұндай email жоқ. Өтінеміз, дұрыс email енгізіңіз:",
+        "enter_daily": "📝 Күнделікті есепті енгізу",
+        "email_prompt": "Электрондық поштаңызды енгізіңіз:",
+        "email_not_found": "Мұндай email жоқ. Дұрыс email енгізіңіз:",
         "password_prompt": "Енді, құпия сөзіңізді енгізіңіз:",
-        "login_success": "Кіру сәтті болды! {email} қош келдіңіз. Сіздің рөліңіз: {role}",
-        "login_failed": "Кіру кезінде қате кетті. Қайта көріңіз.",
-        "daily_already": "Сіз бүгін күнделікті есепті енгізіп қойдыңыз.",
-        "task_prompt": "Бүгін орындауыңыз қажет тапсырманы таңдаңыз:",
-        "start_button": "Бастау",
-        "finish_button": "Аяқтау",
-        "checkin_prompt": "Өтінеміз, кірген кездегі фотоны жіберіңіз:",
-        "checkout_prompt": "Өтінеміз, шыққан кездегі фотоны жіберіңіз:",
-        "confirm_photo": "Бұл сіз жібергіңіз келетін фото екеніне сенесіз бе?",
-        "yes": "Иә",
-        "no": "Жоқ",
-        "cancel": "Бас тарту",
-        "please_send_photo": "Өтінеміз, фото жіберіңіз.",
-        "please_send_new_checkin": "Өтінеміз, кірген кездегі жаңа фото жіберіңіз.",
-        "please_send_new_checkout": "Өтінеміз, шыққан кездегі жаңа фото жіберіңіз.",
-        "submission_success": "Рақмет! Күнделікті есеп сәтті жіберілді.",
-        "submission_error": "Күнделікті есеп жіберілген жоқ. Өтінеміз, қайта көріңіз.",
-        "photo_sent": "Фото жіберілді.",
-        "login_prompt": "Кіріп, жалғастыр:"
+        "login_success": "✅ Кіру сәтті! {email} – қош келдіңіз, рөліңіз: {role}",
+        "login_failed": "❌ Кіру кезінде қате. Қайта көріңіз.",
+        "daily_already": "📝 Бүгін күнделікті есеп енгізілген.",
+        "task_prompt": "👉 Бүгін қандай тапсырманы орындауыңызды таңдаңыз:",
+        "start_button": "🚀 Бастау",
+        "finish_button": "✅ Аяқтау",
+        "checkin_prompt": "📸 Кірген кездегі фотоны жіберіңіз:",
+        "checkout_prompt": "📸 Шыққан кездегі фотоны жіберіңіз:",
+        "confirm_photo": "🤔 Бұл сіз жібергіңіз келетін фото ма?",
+        "yes": "👍 Иә",
+        "no": "👎 Жоқ",
+        "cancel": "❌ Бас тарту",
+        "please_send_photo": "Фото жіберіңіз.",
+        "please_send_new_checkin": "Жаңа кірген кездегі фото жіберіңіз.",
+        "please_send_new_checkout": "Жаңа шыққан кездегі фото жіберіңіз.",
+        "submission_success": "🎉 Рақмет! Күнделікті есеп сәтті жіберілді.",
+        "submission_error": "❌ Қате. Есеп жіберілген жоқ. Қайта көріңіз.",
+        "login_prompt": "Кіріп, жалғастырыңыз:"
     }
 }
 
@@ -153,17 +157,23 @@ def escape_markdown(text: str) -> str:
         text = text.replace(char, f"\\{char}")
     return text
 
+# ----------------------------
+# Bot Handlers
+# ----------------------------
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Language selection in two rows
     keyboard = [
-        [InlineKeyboardButton("English", callback_data="en"), InlineKeyboardButton("Русский", callback_data="ru")],
-        [InlineKeyboardButton("Kyrgyz", callback_data="ky"), InlineKeyboardButton("Қазақша", callback_data="kk")]
+        [InlineKeyboardButton("🇬🇧 English", callback_data="en"), InlineKeyboardButton("🇷🇺 Русский", callback_data="ru")],
+        [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="ky"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="kk")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    # Start with Russian welcome message by default
+    # Start with Russian welcome text by default
     welcome_text = escape_markdown(translations["ru"]["welcome"])
     await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
 
 async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # This handler is used for language selection and logout from the main menu.
     query = update.callback_query
     try:
         await query.answer()
@@ -183,8 +193,8 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     elif data == "logout":
         context.user_data.clear()
         keyboard = [
-            [InlineKeyboardButton("English", callback_data="en"), InlineKeyboardButton("Русский", callback_data="ru")],
-            [InlineKeyboardButton("Kyrgyz", callback_data="ky"), InlineKeyboardButton("Қазақша", callback_data="kk")]
+            [InlineKeyboardButton("🇬🇧 English", callback_data="en"), InlineKeyboardButton("🇷🇺 Русский", callback_data="ru")],
+            [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="ky"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="kk")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         try:
@@ -197,8 +207,8 @@ async def conversation_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE
     if "user_id" not in context.user_data:
         context.user_data.clear()
         keyboard = [
-            [InlineKeyboardButton("English", callback_data="en"), InlineKeyboardButton("Русский", callback_data="ru")],
-            [InlineKeyboardButton("Kyrgyz", callback_data="ky"), InlineKeyboardButton("Қазақша", callback_data="kk")]
+            [InlineKeyboardButton("🇬🇧 English", callback_data="en"), InlineKeyboardButton("🇷🇺 Русский", callback_data="ru")],
+            [InlineKeyboardButton("🇰🇬 Kyrgyz", callback_data="ky"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="kk")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         if update.callback_query:
@@ -217,7 +227,8 @@ async def conversation_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
     else:
-        await main_menu_handler(update, context)
+        # If already logged in, show the logged‐in menu.
+        await show_logged_in_menu(update, context)
     return ConversationHandler.END
 
 async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -293,13 +304,13 @@ async def password_received(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         context.user_data["role"] = user_info.get("role", "unknown")
         context.user_data["user_id"] = user_info.get("user_id")
         context.user_data["project_id"] = user_info.get("project_id")
-        success_text = translations[lang]["login_success"].format(
-            email=user_info.get("email", email), role=user_info.get("role", "unknown")
-        )
-        await update.message.reply_text(text=escape_markdown(success_text), parse_mode=ParseMode.MARKDOWN_V2)
+        # Removed extra login-success reply here to avoid duplication.
     except Exception as e:
         logger.error("Login error: %s", e)
-        await update.message.reply_text(text=escape_markdown(translations[lang]["login_failed"]), parse_mode=ParseMode.MARKDOWN_V2)
+        await update.message.reply_text(
+            text=escape_markdown(translations[lang]["login_failed"]),
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
         return LOGIN_PASSWORD
     return await show_logged_in_menu(update, context)
 
@@ -318,8 +329,8 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     if role == "admin":
         text = translations[lang]["login_success"].format(email=email, role=role) + "\n\nAdmin Menu:"
         keyboard = [
-            [InlineKeyboardButton("View Workers", callback_data="admin_view_workers")],
-            [InlineKeyboardButton("Analytics", callback_data="admin_analytics")],
+            [InlineKeyboardButton("👥 " + "View Workers", callback_data="admin_view_workers")],
+            [InlineKeyboardButton("📊 " + "Analytics", callback_data="admin_analytics")],
             [InlineKeyboardButton(translations[lang]["logout"], callback_data="logout")],
         ]
     else:
@@ -356,8 +367,8 @@ async def enter_daily_entry_handler(update: Update, context: ContextTypes.DEFAUL
 async def logout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     keyboard = [
-        [InlineKeyboardButton("English", callback_data="en"), InlineKeyboardButton("Русский", callback_data="ru")],
-        [InlineKeyboardButton("Kyrgyz", callback_data="ky"), InlineKeyboardButton("Қазақша", callback_data="kk")],
+        [InlineKeyboardButton("🇬🇧 English", callback_data="en"), InlineKeyboardButton("🇷🇺 Русский", callback_data="ru")],
+        [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="ky"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="kk")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
