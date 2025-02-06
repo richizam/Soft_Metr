@@ -15,6 +15,9 @@ from telegram.ext import (
     filters,
 )
 
+# Import the admin_conv_handler from telegram_admin.py
+from telegram_admin import admin_conv_handler
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
@@ -37,9 +40,10 @@ API_CHECK_EMAIL_URL = os.getenv("API_CHECK_EMAIL_URL", "http://web:8000/auth/che
 API_GET_TASKS_URL = os.getenv("API_GET_TASKS_URL", "http://web:8000")
 API_DAILY_ENTRY_URL = os.getenv("API_DAILY_ENTRY_URL", "http://web:8000/data/daily-entry")
 API_DAILY_ENTRY_TODAY_URL = os.getenv("API_DAILY_ENTRY_TODAY_URL", "http://web:8000/data/daily-entry/today")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8103489251:AAEw30I0rifou8Ehx_Du2R_TCLEzA6w_Sbk")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "REPLACE_ME_WITH_REAL_TOKEN")
 
-# Main translations dictionary (for non‑admin texts)
+# Main translations dictionary (for non‑admin texts).
+# We ADD extra keys here for "view_workers", "analytics", and "admin_menu"
 translations = {
     "en": {
         "welcome": "🌐 *Welcome!* Please choose your language:",
@@ -66,7 +70,11 @@ translations = {
         "please_send_new_checkout": "Please send a new check‑out photo.",
         "submission_success": "🎉 Thank you! Your daily entry has been submitted successfully.",
         "submission_error": "❌ Error submitting daily entry. Please try again.",
-        "login_prompt": "Please log in to continue:"
+        "login_prompt": "Please log in to continue:",
+        # Added admin keys in English
+        "admin_menu": "🛠 Admin Menu:",
+        "view_workers": "👥 View Workers",
+        "analytics": "📊 Analytics",
     },
     "ru": {
         "welcome": "Привет! 👋🏻 Пожалуйста, выбери язык 🌍💬:",
@@ -93,7 +101,11 @@ translations = {
         "please_send_new_checkout": "Пришли новое фото для выхода.",
         "submission_success": "🎉 Спасибо! Ежедневный отчёт успешно отправлен.",
         "submission_error": "❌ Ошибка отправки отчёта. Попробуй ещё раз.",
-        "login_prompt": "Пожалуйста, войди, чтобы продолжить:"
+        "login_prompt": "Пожалуйста, войди, чтобы продолжить:",
+        # Added admin keys in Russian
+        "admin_menu": "🛠 Админ меню:",
+        "view_workers": "👥 Рабочие",
+        "analytics": "📊 Аналитика",
     },
     "ky": {
         "welcome": "Салам! 👋🏻 Сураныч, тилиңизди тандаңыз:",
@@ -120,7 +132,11 @@ translations = {
         "please_send_new_checkout": "Жаңы чыгуу фото жибериңиз.",
         "submission_success": "🎉 Рахмат! Күнүмдүк эсеп ийгиликтүү жөнөтүлдү.",
         "submission_error": "❌ Ката. Күнүмдүк эсеп жөнөтүлгөн жок. Кайра аракет кылыңыз.",
-        "login_prompt": "Сураныч, кирип улантыңыз:"
+        "login_prompt": "Сураныч, кирип улантыңыз:",
+        # Added admin keys in Kyrgyz
+        "admin_menu": "🛠 Админ меню:",
+        "view_workers": "👥 Ишчилер",
+        "analytics": "📊 Аналитика",
     },
     "kk": {
         "welcome": "Сәлем! 👋🏻 Тілді таңдаңыз:",
@@ -147,7 +163,11 @@ translations = {
         "please_send_new_checkout": "Жаңа шыққан кездегі фото жіберіңіз.",
         "submission_success": "🎉 Рақмет! Күнделікті есеп сәтті жіберілді.",
         "submission_error": "❌ Қате. Есеп жіберілген жоқ. Қайта көріңіз.",
-        "login_prompt": "Кіріп, жалғастырыңыз:"
+        "login_prompt": "Кіріп, жалғастырыңыз:",
+        # Added admin keys in Kazakh
+        "admin_menu": "🛠 Админ меню:",
+        "view_workers": "👥 Қызметкерлер",
+        "analytics": "📊 Аналитика",
     }
 }
 
@@ -304,7 +324,6 @@ async def password_received(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         context.user_data["role"] = user_info.get("role", "unknown")
         context.user_data["user_id"] = user_info.get("user_id")
         context.user_data["project_id"] = user_info.get("project_id")
-        # Removed extra login-success reply here to avoid duplication.
     except Exception as e:
         logger.error("Login error: %s", e)
         await update.message.reply_text(
@@ -326,14 +345,18 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error("Error checking daily entry for today: %s", e)
         result = {"exists": False}
+
+    # If admin, show admin menu
     if role == "admin":
-        text = translations[lang]["login_success"].format(email=email, role=role) + "\n\nAdmin Menu:"
+        text = translations[lang]["login_success"].format(email=email, role=role)
+        text += "\n\n" + translations[lang]["admin_menu"]
         keyboard = [
-            [InlineKeyboardButton("👥 " + "View Workers", callback_data="admin_view_workers")],
-            [InlineKeyboardButton("📊 " + "Analytics", callback_data="admin_analytics")],
+            [InlineKeyboardButton(translations[lang]["view_workers"], callback_data="admin_view_workers")],
+            [InlineKeyboardButton(translations[lang]["analytics"], callback_data="admin_analytics")],
             [InlineKeyboardButton(translations[lang]["logout"], callback_data="logout")],
         ]
     else:
+        # If not admin
         if result.get("exists", False):
             text = translations[lang]["login_success"].format(email=email, role=role) + "\n\n" + translations[lang]["daily_already"]
             keyboard = [[InlineKeyboardButton(translations[lang]["logout"], callback_data="logout")]]
@@ -343,6 +366,7 @@ async def show_logged_in_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
                 [InlineKeyboardButton(translations[lang]["enter_daily"], callback_data="enter_daily_entry")],
                 [InlineKeyboardButton(translations[lang]["logout"], callback_data="logout")],
             ]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.callback_query:
         try:
@@ -505,7 +529,7 @@ async def confirm_checkin_handler(update: Update, context: ContextTypes.DEFAULT_
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_caption(
-            caption=escape_markdown(translations[lang]["photo_sent"]),
+            caption=escape_markdown("Photo saved."),  # You could localize if needed
             reply_markup=reply_markup,
             parse_mode=ParseMode.MARKDOWN_V2,
         )
@@ -602,6 +626,7 @@ async def confirm_checkout_handler(update: Update, context: ContextTypes.DEFAULT
             context.user_data["check_out_photo"] = permanent_path
         context.user_data.pop("temp_check_out_photo", None)
         try:
+            from datetime import datetime
             start_time = datetime.fromisoformat(context.user_data.get("start_time"))
             finish_time = datetime.fromisoformat(context.user_data.get("finish_time"))
             diff = finish_time - start_time
@@ -645,8 +670,9 @@ async def confirm_checkout_handler(update: Update, context: ContextTypes.DEFAULT
         return WAIT_CHECKOUT_PHOTO
 
 def main() -> None:
-    from telegram_admin import admin_conv_handler
     application = Application.builder().token(BOT_TOKEN).build()
+
+    # Conversation handler for user login & daily entry
     conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(login_start, pattern="^login$"),
@@ -695,10 +721,19 @@ def main() -> None:
         fallbacks=[CallbackQueryHandler(conversation_cancel, pattern="^cancel_conversation$")],
         allow_reentry=True,
     )
+
+    # Command /start => start
     application.add_handler(CommandHandler("start", start))
+
+    # Handler for picking language or logout at the main menu
     application.add_handler(CallbackQueryHandler(main_menu_handler, pattern="^(en|ru|ky|kk|logout)$"))
+
+    # Add the user login/daily-entry conversation
     application.add_handler(conv_handler)
+
+    # Add the admin conversation
     application.add_handler(admin_conv_handler)
+
     application.run_polling()
 
 if __name__ == "__main__":
